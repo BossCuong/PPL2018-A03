@@ -38,7 +38,16 @@ class StaticChecker(BaseVisitor,Utils):
         print("new program")
         global_envi = c.copy()
 
-        return [self.visit(x,global_envi) for x in ast.decl]
+        program = [self.visit(x,global_envi) for x in ast.decl]
+        
+        res = self.lookup("main",global_envi,lambda x : x.name)
+
+        if (res is None 
+                or not isinstance(res.mtype,MType) 
+                or not isinstance(res.mtype.rettype,VoidType)):
+            raise NoEntryPoint()
+
+        return program
 
     def visitVarDecl(self,ast, c):
         # Get ID
@@ -67,9 +76,15 @@ class StaticChecker(BaseVisitor,Utils):
         res = self.lookup(id,c,lambda x: x.name)
         
         if res:
-            raise Redeclared(Function(),res.name)
-
-        paramlst = [self.visit(x,local_envi) for x in ast.param]
+            if isinstance(ast.returnType,VoidType):
+                raise Redeclared(Procedure(),res.name)
+            else:
+                raise Redeclared(Function(),res.name)
+        
+        try:
+            paramlst = [self.visit(x,local_envi) for x in ast.param]
+        except Redeclared as e:
+            raise Redeclared(Parameter(),e.n)
         
         locallst = [self.visit(x,local_envi) for x in ast.local]
         
@@ -87,7 +102,8 @@ class StaticChecker(BaseVisitor,Utils):
         block_envi = local_envi.copy()
 
         self.__mergeEnvironment(block_envi,c)
-
+        
+        print("func")
         for x in block_envi:
             print(x.name + ' ' + str(x.mtype))
 
