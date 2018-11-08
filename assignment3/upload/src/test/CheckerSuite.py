@@ -13,8 +13,9 @@ class CheckerSuite(unittest.TestCase):
         """Simple program: int main() {} """
         input = """
                    procedure main(); begin end 
-                   procedure main(); begin end"""
-        expect = "Redeclared Procedure: main"
+                   procedure foo(); begin end
+                   procedure PutLn(); begin end"""
+        expect = "Redeclared Procedure: PutLn"
         self.assertTrue(TestChecker.test(input,expect,400))
 
     def test_redeclare2(self):
@@ -145,7 +146,7 @@ class CheckerSuite(unittest.TestCase):
         expect = "Undeclared Procedure: k"
         self.assertTrue(TestChecker.test(input,expect,410))
 
-    def test_undeclare2(self):
+    def test_undeclare3(self):
         """Simple program: int main() {} """
         input = """function k() : integer; begin end
                    procedure main();
@@ -156,7 +157,7 @@ class CheckerSuite(unittest.TestCase):
         expect = "Undeclared Procedure: k"
         self.assertTrue(TestChecker.test(input,expect,411))
 
-    def test_undeclare3(self):
+    def test_undeclare4(self):
         """Simple program: int main() {} """
         input = """
                    procedure main();
@@ -167,9 +168,9 @@ class CheckerSuite(unittest.TestCase):
         expect = "Undeclared Procedure: k"
         self.assertTrue(TestChecker.test(input,expect,412))
 
-    def test_undeclare4(self):
+    def test_undeclare5(self):
         """Simple program: int main() {} """
-        input = """procedure K(); begin end
+        input = """function k() : integer; begin end
                    procedure main();
                    var a,b:integer;
                    begin
@@ -178,19 +179,233 @@ class CheckerSuite(unittest.TestCase):
         expect = "Undeclared Procedure: x"
         self.assertTrue(TestChecker.test(input,expect,413))
 
-    def test_undeclare5(self):
+    def test_undeclare6(self):
         """Simple program: int main() {} """
         input = """procedure K(); begin end
                    procedure main();
                    var a,b:integer;
-                   f : real;
-                   c,d:string;
-                   e: array [1 .. 2] of integer;
                    begin
-                       f := a -- f;
+                       a := k();
                    end """
-        expect = "Undeclared Procedure: k"
+        expect = "Undeclared Function: k"
         self.assertTrue(TestChecker.test(input,expect,414))
+
+    def test_undeclare7(self):
+        """Simple program: int main() {} """
+        input = """procedure K(); begin end
+                   procedure main();
+                   var a,b:integer;
+                   begin
+                       if k() then begin end
+                   end """
+        expect = "Undeclared Function: k"
+        self.assertTrue(TestChecker.test(input,expect,415))
+
+    def test_undeclare8(self):
+        """Simple program: int main() {} """
+        input = """procedure K(); begin end
+                   procedure main();
+                   var a,b:integer;
+                   begin
+                       if l then begin end
+                   end """
+        expect = "Undeclared Identifier: l"
+        self.assertTrue(TestChecker.test(input,expect,416))
+
+
+    def test_undeclare9(self):
+        """Simple program: int main() {} """
+        input = """function x():integer; begin end
+                   function y():integer; begin end
+                   function z():integer; begin end
+                   procedure main();
+                   var a,b,c,d,e,f,g,h:integer;
+                   begin
+                       a := (a+b)/(c*d)*(x()*y()) + (y()/z())+(l div b * c);
+                   end """
+        expect = "Undeclared Identifier: l"
+        self.assertTrue(TestChecker.test(input,expect,417))
+
+    def test_typeStmt1(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b:integer;
+                   begin
+                       if k then begin end
+                   end """
+        expect = "Type Mismatch In Statement: If(Id(k),[],[])"
+        self.assertTrue(TestChecker.test(input,expect,418))
+
+    def test_typeStmt2(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b:integer;
+                   begin
+                       if (x + y) / (a * b) then begin end
+                   end """
+        expect = "Type Mismatch In Statement: If(BinaryOp(/,BinaryOp(+,Id(x),Id(y)),BinaryOp(*,Id(a),Id(b))),[],[])"
+        self.assertTrue(TestChecker.test(input,expect,419))
+
+    def test_typeStmt3(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b:integer;
+                   begin
+                       if (a >= b) and c then 
+                           for x := a to b do begin end
+                   end """
+        expect = "Type Mismatch In Statement: For(Id(x)Id(a),Id(b),True,[])"
+        self.assertTrue(TestChecker.test(input,expect,420))
+
+    def test_typeStmt4(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b:integer;
+                   begin
+                       if c and c begin end
+                       with
+                           c : integer;
+                       do
+                           if c then begin end
+                   end """
+        expect = "Type Mismatch In Statement: If(Id(c),[],[])"
+        self.assertTrue(TestChecker.test(input,expect,421))
+
+
+    def test_typeStmt5(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b:integer;
+                   begin
+                       if (a >= b) and c then 
+                           for a := a + b to (a * b) * (b+a div a) do
+                               for a := a + b to (a * b) / (b+a div a) do begin end
+                   end """
+        expect = "Type Mismatch In Statement: For(Id(a)BinaryOp(+,Id(a),Id(b)),BinaryOp(/,BinaryOp(*,Id(a),Id(b)),BinaryOp(+,Id(b),BinaryOp(div,Id(a),Id(a)))),True,[])"
+        self.assertTrue(TestChecker.test(input,expect,422))
+
+
+    def test_typeStmt6(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b:integer;
+                   begin
+                       if (a >= b) and c then 
+                           for a := a + b to (a * b) * (b+a div a) do begin
+                               for a := a / b to (a * b) * (b+a div a) do begin end 
+                            end
+                   end """
+        expect = "Type Mismatch In Statement: For(Id(a)BinaryOp(/,Id(a),Id(b)),BinaryOp(*,BinaryOp(*,Id(a),Id(b)),BinaryOp(+,Id(b),BinaryOp(div,Id(a),Id(a)))),True,[])"
+        self.assertTrue(TestChecker.test(input,expect,423))
+
+    def test_typeStmt7(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b,e:integer;
+                   for e := 2 * b to (a * b) * (b+a div a) do begin end
+                   begin
+                       with
+                       e :real;
+                       do
+                           begin
+                               if (a >= b) and c then begin end
+                               for a := a + b to (a * b) * (b+a div a) do begin end
+                               for e := a + b to (a * b) * (b+a div a) do begin end
+                        end
+                   end """
+        expect = "Type Mismatch In Statement: For(Id(e)BinaryOp(+,Id(a),Id(b)),BinaryOp(*,BinaryOp(*,Id(a),Id(b)),BinaryOp(+,Id(b),BinaryOp(div,Id(a),Id(a)))),True,[])"
+        self.assertTrue(TestChecker.test(input,expect,424))
+
+    def test_typeStmt8(self):
+        """Simple program: int main() {} """
+        input = """var x,y : real;
+                   procedure main(c : boolean; k :string);
+                   var a,b,e:integer;
+                   for e := 2 * b to (a * b) * (b+a div a) do begin end
+                   begin
+                       with
+                       e :real;
+                       do
+                           begin
+                               while a + b do begin end
+                        end
+                   end """
+        expect = "Type Mismatch In Statement: While(BinaryOp(+,Id(a),Id(b)),[])"
+        self.assertTrue(TestChecker.test(input,expect,425))
+
+
+    def test_typeStmt9(self):
+        """Simple program: int main() {} """
+        input = """var x, y : array[1 .. 3] of integer;
+            a, b: integer;
+            c, d: real;
+            e, f: boolean;
+            m, n : string;
+        procedure main();
+        begin
+        end
+
+        function foo() : array[1 .. 3] of integer;
+        begin   
+            return x;    
+        end
+
+        procedure foo2 (n: real; m : integer);
+        begin
+            foo();
+        end"""
+        expect = "Type Mismatch In Statement: Return(Some(Id(a)))"
+        self.assertTrue(TestChecker.test(input,expect,426))
+
+    # def test_undeclare5(self):
+    #     """Simple program: int main() {} """
+    #     input = """procedure K(); begin end
+    #                procedure main();
+    #                var a,b:integer;
+    #                f : boolean;
+    #                c,d:string;
+    #                e: array [1 .. 2] of integer;
+    #                begin
+    #                    if f then return;
+    #                    else
+    #                    if f then return;
+    #                    else 
+    #                    if f then return;
+    #                 end
+                
+    #             procedure doo();
+    #                var a,b:integer;
+    #                f : boolean;
+    #                c,d:string;
+    #                e: array [1 .. 2] of integer;
+    #                begin
+    #                    if f then return a ;
+    #                    else
+    #                    if f then return a ;
+    #                    else 
+    #                    if f then return a;
+    #                end 
+
+    #                procedure koo();
+    #                var a,b:integer;
+    #                f : boolean;
+    #                c,d:string;
+    #                e: array [1 .. 2] of integer;
+    #                begin
+    #                   return;
+    #                   return;
+    #                   return;
+    #                end
+    #                 """
+    #     expect = "Undeclared Procedure: k"
+    #     self.assertTrue(TestChecker.test(input,expect,414))
 
 
     # def test_redeclare6(self):
