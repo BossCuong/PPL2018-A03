@@ -73,7 +73,7 @@ class CheckerSuite(unittest.TestCase):
     def test_redeclare8(self):
         """Simple program: int main() {} """
         input = """var d:string;c:real;e:boolean;
-                   function foo():integer; begin end
+                   function foo():integer; begin return integer; end
                    procedure k(a:integer;b:real); begin end
                    procedure main(f:string);
                    var a,b:integer;
@@ -170,7 +170,7 @@ class CheckerSuite(unittest.TestCase):
 
     def test_undeclare5(self):
         """Simple program: int main() {} """
-        input = """function k() : integer; begin end
+        input = """function k() : integer; begin return k(); end
                    procedure main();
                    var a,b:integer;
                    begin
@@ -215,9 +215,9 @@ class CheckerSuite(unittest.TestCase):
 
     def test_undeclare9(self):
         """Simple program: int main() {} """
-        input = """function x():integer; begin end
-                   function y():integer; begin end
-                   function z():integer; begin end
+        input = """function x():integer; begin return x();; end
+                   function y():integer; begin  return x();end
+                   function z():integer; begin return x(); end
                    procedure main();
                    var a,b,c,d,e,f,g,h:integer;
                    begin
@@ -350,17 +350,20 @@ class CheckerSuite(unittest.TestCase):
             m, n : string;
         procedure main();
         begin
+
+           with
+           k : integer;
+           do
+           begin
+           return c;
+           with
+           a : real;
+           return a
+           do begin end
+           end
         end
 
-        function foo() : array[1 .. 3] of integer;
-        begin   
-            return x;    
-        end
-
-        procedure foo2 (n: real; m : integer);
-        begin
-            foo();
-        end"""
+        """
         expect = "Type Mismatch In Statement: Return(Some(Id(a)))"
         self.assertTrue(TestChecker.test(input,expect,426))
 

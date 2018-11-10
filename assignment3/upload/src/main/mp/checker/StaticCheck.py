@@ -43,6 +43,20 @@ class StaticChecker(BaseVisitor,Utils):
                 temp.append(x)
 
         return inner + temp
+    
+    def __checkType(self,lhs,rhs):
+
+        if type(lhs) is not type(rhs):
+            if not(type(lhs) is FloatType and not type(rhs) is IntType):
+                return False
+
+        if(type(rhs) is ArrayType):
+            if (rhs.lower != lhs.lower 
+                or rhs.upper != lhs.upper
+                or rhs.eleType != lhs.eleType):
+                return False
+        
+        return True
 
     def __init__(self,ast):
         self.ast = ast
@@ -143,8 +157,6 @@ class StaticChecker(BaseVisitor,Utils):
 
         list(map(lambda x: self.visit(x,t),ast.body))
         
-        print("\nreturn")
-
         for x in t['returnlst'] :
             print(x[1])
         
@@ -153,16 +165,11 @@ class StaticChecker(BaseVisitor,Utils):
                 if y is not None:
                     raise TypeMismatchInStatement(x)
         else:
+            if not t['isReturn']:
+                raise FunctionNotReturn(id)
             for x,y in t['returnlst'] :
-                if(type(y) is not type(ast.returnType) 
-                    and not(type(ast.returnType) is FloatType and type(y) is IntType)):
+                if not self.__checkType(ast.returnType,y):
                     raise TypeMismatchInStatement(x)
-                ## Check array type
-                if(type(y) is ArrayType):
-                    if (y.lower != ast.returnType.lower 
-                        or y.upper != ast.returnType.upper
-                        or y.eleType != ast.returnType.eleType):
-                        raise TypeMismatchInStatement(x[0])
                     
     
     def visitBinaryOp(self, ast, c):
@@ -171,7 +178,7 @@ class StaticChecker(BaseVisitor,Utils):
 
         right = self.visit(ast.right,c)
         
-        op = ast.op
+        op = ast.op.lower()
         
         compare_op = ['<','<=','>','>=','<>','=']
 
@@ -209,7 +216,7 @@ class StaticChecker(BaseVisitor,Utils):
 
         body = self.visit(ast.body,c)
 
-        op = ast.op
+        op = ast.op.lower()
         
         if op == 'not':
             if type(body) is not BoolType :
@@ -231,7 +238,7 @@ class StaticChecker(BaseVisitor,Utils):
         if res is None or not type(res.mtype) is MType or type(res.mtype.rettype) is VoidType:
             raise Undeclared(Function(),ast.method.name)
         elif (len(res.mtype.partype) != len(at) 
-             or True in [(type(a) != type(b)) and not(type(a) is IntType and type(b) is FloatType) for a,b in zip(at,res.mtype.partype)]):
+             or True in [not self.__checkType(b,a) for a,b in zip(at,res.mtype.partype)]):
             raise TypeMismatchInStatement(ast)   
         else:
             return res.mtype.rettype
@@ -294,7 +301,9 @@ class StaticChecker(BaseVisitor,Utils):
 
         t['envi'] = block_envi
 
-        return [self.visit(x,t) for x in ast.stmt]
+        [self.visit(x,t) for x in ast.stmt]
+
+        c['isReturn'] = t['isReturn']
     
     def visitIf(self, ast, c):
         #expr:Expr
@@ -302,9 +311,23 @@ class StaticChecker(BaseVisitor,Utils):
         #elseStmt:list(Stmt)
         envi = c['envi']
 
+        temp = c['isReturn']
+
         expr = self.visit(ast.expr,envi)
+        
+        c['isReturn'] = False
         thenStmt = [self.visit(x,c) for x in ast.thenStmt]
+        temp1 = c['isReturn']
+
+        c['isReturn'] = False
         elseStmt = [self.visit(x,c) for x in ast.elseStmt]
+        temp2 = c['isReturn']
+
+        
+        if temp1 and temp2:
+            c['isReturn'] = True
+        else:
+            c['isReturn'] = temp
          
         if type(expr) is not BoolType :
             raise TypeMismatchInStatement(ast)
@@ -380,7 +403,7 @@ class StaticChecker(BaseVisitor,Utils):
         if res is None or not type(res.mtype) is MType or not type(res.mtype.rettype) is VoidType:
             raise Undeclared(Procedure(),ast.method.name)
         elif (len(res.mtype.partype) != len(at) 
-             or True in [(type(a) != type(b)) and not(type(a) is IntType and type(b) is FloatType) for a,b in zip(at,res.mtype.partype)]):
+             or True in [not self.__checkType(b,a) for a,b in zip(at,res.mtype.partype)]):
             #print([print(str(type(a))+ ' ' + str(type(b))) for a,b in zip(at,res.mtype.partype)])
             raise TypeMismatchInStatement(ast)            
         else:
