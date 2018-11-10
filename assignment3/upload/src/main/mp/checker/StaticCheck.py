@@ -47,13 +47,13 @@ class StaticChecker(BaseVisitor,Utils):
     def __checkType(self,lhs,rhs):
 
         if type(lhs) is not type(rhs):
-            if not(type(lhs) is FloatType and not type(rhs) is IntType):
+            if not(type(lhs) is FloatType and type(rhs) is IntType):
                 return False
 
         if(type(rhs) is ArrayType):
             if (rhs.lower != lhs.lower 
                 or rhs.upper != lhs.upper
-                or rhs.eleType != lhs.eleType):
+                or type(rhs.eleType) is not type(lhs.eleType)):
                 return False
         
         return True
@@ -87,7 +87,8 @@ class StaticChecker(BaseVisitor,Utils):
 
         if (res is None 
                 or not isinstance(res.mtype,MType) 
-                or not isinstance(res.mtype.rettype,VoidType)):
+                or not isinstance(res.mtype.rettype,VoidType)
+                or len(res.mtype.partype) != 0):
             raise NoEntryPoint()
 
         return program
@@ -156,9 +157,6 @@ class StaticChecker(BaseVisitor,Utils):
 
 
         list(map(lambda x: self.visit(x,t),ast.body))
-        
-        for x in t['returnlst'] :
-            print(x[1])
         
         if type(ast.returnType) is VoidType:
             for x,y in t['returnlst'] :
@@ -234,12 +232,12 @@ class StaticChecker(BaseVisitor,Utils):
         at = [self.visit(x,envi)for x in ast.param]
         
         res = self.lookup(ast.method.name.lower(),envi,lambda x: x.name.lower())
-
+        
         if res is None or not type(res.mtype) is MType or type(res.mtype.rettype) is VoidType:
             raise Undeclared(Function(),ast.method.name)
         elif (len(res.mtype.partype) != len(at) 
              or True in [not self.__checkType(b,a) for a,b in zip(at,res.mtype.partype)]):
-            raise TypeMismatchInStatement(ast)   
+            raise TypeMismatchInExpression(ast)   
         else:
             return res.mtype.rettype
     
@@ -247,6 +245,8 @@ class StaticChecker(BaseVisitor,Utils):
         res = self.lookup(ast.name.lower(),c,lambda x : x.name.lower())
         
         if res is None:
+            raise Undeclared(Identifier(),ast.name)
+        elif type(res.mtype) is MType :
             raise Undeclared(Identifier(),ast.name)
 
         return res.mtype
@@ -267,11 +267,11 @@ class StaticChecker(BaseVisitor,Utils):
         #lhs:Expr
         #exp:Expr
         envi = c['envi']
-        print("\nAssign")
+    
         lhs = self.visit(ast.lhs,envi)
         
         rhs = self.visit(ast.exp,envi)
-        print(str(lhs) + " " +  str(rhs))
+
         ## Note:string type ????
         if type(lhs) in [ArrayType,StringType] :
             raise TypeMismatchInStatement(ast)
@@ -322,10 +322,12 @@ class StaticChecker(BaseVisitor,Utils):
         c['isReturn'] = False
         elseStmt = [self.visit(x,c) for x in ast.elseStmt]
         temp2 = c['isReturn']
-
-        
-        if temp1 and temp2:
-            c['isReturn'] = True
+ 
+        if len(elseStmt):
+            if temp1 and temp2:
+                c['isReturn'] = True
+            else:
+                c['isReturn'] = temp
         else:
             c['isReturn'] = temp
          
@@ -340,14 +342,14 @@ class StaticChecker(BaseVisitor,Utils):
         #loop:list(Stmt)
         #up:Boolean #True => increase; False => decrease
         envi = c['envi']
-        
+        t = c.copy()
         id = self.visit(ast.id,envi)
         expr1 = self.visit(ast.expr1,envi)
         expr2 = self.visit(ast.expr2,envi)
 
-        c['isInLoop'] = True
-        loop = [self.visit(x,c) for x in ast.loop]
-        c['isInLoop'] = False
+        t['isInLoop'] = True
+        loop = [self.visit(x,t) for x in ast.loop]
+        t['isInLoop'] = False
 
         if not isinstance(id,IntType) or not isinstance(expr1,IntType) or not isinstance(expr2,IntType):
             raise TypeMismatchInStatement(ast)
@@ -378,12 +380,12 @@ class StaticChecker(BaseVisitor,Utils):
         #sl:list(Stmt)
         #exp: Expr
         envi = c['envi']
-
+        t = c.copy()
         exp = self.visit(ast.exp,envi)
 
-        c['isInLoop'] = True
-        sl = [self.visit(x,c) for x in ast.sl]
-        c['isInLoop'] = False
+        t['isInLoop'] = True
+        sl = [self.visit(x,t) for x in ast.sl]
+        t['isInLoop'] = False
 
         if type(exp) is not BoolType :
             raise TypeMismatchInStatement(ast)
@@ -404,7 +406,6 @@ class StaticChecker(BaseVisitor,Utils):
             raise Undeclared(Procedure(),ast.method.name)
         elif (len(res.mtype.partype) != len(at) 
              or True in [not self.__checkType(b,a) for a,b in zip(at,res.mtype.partype)]):
-            #print([print(str(type(a))+ ' ' + str(type(b))) for a,b in zip(at,res.mtype.partype)])
             raise TypeMismatchInStatement(ast)            
         else:
             return res.mtype.rettype
