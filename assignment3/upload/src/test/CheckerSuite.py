@@ -1155,7 +1155,7 @@ class CheckerSuite(unittest.TestCase):
                     break;
                     end
                     continue;
-                    return a/b
+                    return a/b;
                     for a:= b to a do return a/b;
                     end
 
@@ -1217,8 +1217,6 @@ class CheckerSuite(unittest.TestCase):
                        d : boolean;
                        koo : array [1 .. 2] of integer;
                    function main():real; begin return x; end
-                   begin
-                   end
 
                    function foo(x :array[1 .. 3] of integer;loo:integer;phic:real) : real;
                    var a,b,e:integer;
@@ -1240,8 +1238,6 @@ class CheckerSuite(unittest.TestCase):
                        d : boolean;
                        koo : array [1 .. 2] of integer;
                    function main():real; begin return x; end
-                   begin
-                   end
 
                    function foo(x :array[1 .. 3] of integer;loo:integer;phic:real) : real;
                    var a,b,e:integer;
@@ -1263,9 +1259,6 @@ class CheckerSuite(unittest.TestCase):
                        d : boolean;
                        koo : array [1 .. 2] of integer;
                    procedure main(); begin return; end
-                   begin
-                   end
-
                    function foo(i:integer):string;
                         var ret: array [1 .. 2] of string;
                         begin
@@ -1292,8 +1285,7 @@ class CheckerSuite(unittest.TestCase):
                        d : boolean;
                        koo : array [1 .. 2] of integer;
                    procedure main(); begin return; end
-                   begin
-                   end
+
 
                    function foo(i:integer):string;
                         var ret: array [1 .. 2] of string;
